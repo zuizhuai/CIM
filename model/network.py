@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .resnet import resnet50
+from model.Res2Net_v1b import res2net50_v1b
 
 
 class ChannelAttention(nn.Module):
@@ -206,7 +206,7 @@ class CIM(nn.Module):
     def __init__(self, backbone_pre=True):
         super(CIM, self).__init__()
 
-        self.res = resnet50(pretrained=backbone_pre)
+        self.res = res2net50_v1b(pretrained=backbone_pre)
         self.conv1 = nn.Sequential(
             nn.Conv2d(1024, 1, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(1),

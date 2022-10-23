@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from model.network import CIM
 from torch.autograd import Variable
 from dataset import test_dataset, train_dataset
+from tensorboardX import SummaryWriter
 
 
 def structure_loss(pred, mask):
@@ -76,6 +77,7 @@ def Train():
 
     args = parse.parse_args()
 
+
     model = CIM(backbone_pre=args.backbone_pred).cuda()
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr,momentum=0.9)
     # 使用apex混合精度训练
@@ -86,6 +88,7 @@ def Train():
     model.train()
 
     try:
+        writer = SummaryWriter(args.save_path + '/summary')
         for epoch in range(args.start_epoch + 1, args.start_epoch + 1 + args.epoch):
             step_loss = []
             iteration = tqdm(train_loader)
@@ -100,8 +103,9 @@ def Train():
                 edge = Variable(edge).cuda()
 
                 L_c = structure_loss(out1, gt) + structure_loss(out2, gt) + structure_loss(out3, gt)
-                loss = L_c
-                step_loss.append(loss.cpu().detach().numpy())
+                loss = L_c.cpu().detach().numpy()
+                step_loss.append(loss)
+                writer.add_scalars('Loss_Statistics',{'step_loss': loss},global_step=step)
 
                 if args.apex:
                     with apex.amp.scale_loss(loss, optimizer) as scale_loss:
@@ -115,6 +119,8 @@ def Train():
                         '=> [Loss_s: {:.4f}]'.format(end - start, epoch, args.epoch, args.lr, step, total_step, loss))
                     iteration.set_description(desc=status)
                 optimizer.step()
+            writer.add_scalar('Loss-epoch', sum(step_loss), global_step=epoch)
+            adjust_lr(optimizer,decay_rate=0.0005)
 
 
             if os.path.exists(args.save_path) is None:
